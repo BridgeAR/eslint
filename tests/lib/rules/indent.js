@@ -20,6 +20,7 @@ const path = require("path");
 
 const fixture = fs.readFileSync(path.join(__dirname, "../../fixtures/rules/indent/indent-invalid-fixture-1.js"), "utf8");
 const fixedFixture = fs.readFileSync(path.join(__dirname, "../../fixtures/rules/indent/indent-valid-fixture-1.js"), "utf8");
+const parser = require("../../fixtures/fixture-parser");
 
 /**
  * Create error message object for failure cases with a single 'found' indentation type
@@ -3066,6 +3067,50 @@ ruleTester.run("indent", rule, {
         {
             code: "import 'foo'",
             parserOptions: { sourceType: "module" }
+        },
+
+        //----------------------------------------------------------------------
+        // Ignore Unknown Nodes
+        //----------------------------------------------------------------------
+
+        {
+            code: unIndent`
+                interface Foo {
+                    bar: string;
+                    baz: number;
+                }
+            `,
+            parser: parser("unknown-nodes/interface")
+        },
+        {
+            code: unIndent`
+                namespace Foo {
+                    const bar = 3,
+                        baz = 2;
+
+                    if (true) {
+                        const bax = 3;
+                    }
+                }
+            `,
+            parser: parser("unknown-nodes/namespace-valid")
+        },
+        {
+            code: unIndent`
+                abstract class Foo {
+                    public bar() {
+                        let aaa = 4,
+                            boo;
+
+                        if (true) {
+                            boo = 3;
+                        }
+
+                        boo = 3 + 2;
+                    }
+                }
+            `,
+            parser: parser("unknown-nodes/abstract-class-valid")
         }
     ],
 
@@ -6316,6 +6361,67 @@ ruleTester.run("indent", rule, {
             `,
             parserOptions: { sourceType: "module" },
             errors: expectedErrors([2, 4, 0, "Identifier"])
+        },
+
+        //----------------------------------------------------------------------
+        // Ignore Unknown Nodes
+        //----------------------------------------------------------------------
+
+        {
+            code: unIndent`
+                namespace Foo {
+                    const bar = 3,
+                    baz = 2;
+
+                    if (true) {
+                    const bax = 3;
+                    }
+                }
+            `,
+            output: unIndent`
+                namespace Foo {
+                    const bar = 3,
+                        baz = 2;
+
+                    if (true) {
+                        const bax = 3;
+                    }
+                }
+            `,
+            parser: parser("unknown-nodes/namespace-invalid"),
+            errors: expectedErrors([[3, 8, 4, "Identifier"], [6, 8, 4, "Keyword"]])
+        },
+        {
+            code: unIndent`
+                abstract class Foo {
+                    public bar() {
+                        let aaa = 4,
+                        boo;
+
+                        if (true) {
+                        boo = 3;
+                        }
+
+                    boo = 3 + 2;
+                    }
+                }
+            `,
+            output: unIndent`
+                abstract class Foo {
+                    public bar() {
+                        let aaa = 4,
+                            boo;
+
+                        if (true) {
+                            boo = 3;
+                        }
+
+                        boo = 3 + 2;
+                    }
+                }
+            `,
+            parser: parser("unknown-nodes/abstract-class-invalid"),
+            errors: expectedErrors([[4, 12, 8, "Identifier"], [7, 12, 8, "Identifier"], [10, 8, 4, "Identifier"]])
         }
     ]
 });
